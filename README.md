@@ -14,10 +14,30 @@ A modular Python framework for backtesting algorithmic trading strategies based 
 
 ## Project Status
 
-**Version:** 0.2.1 (Alpha)  
-**Status:** DataManager module stable and tested, backtesting engine in development
+**Version:** 0.3.1 (Alpha)  
+**Status:** DataManager and Portfolio modules complete and tested, backtesting engine in development
 
 ### Changelog
+
+**v0.3.1** (2026-01-09) - **CRITICAL ADDITION**
+- Added `convert_values_to_shares()` method to Portfolio
+- Correctly accounts for buy commissions when calculating share quantities
+- Prevents insufficient cash errors during backtesting
+- Essential prerequisite for Backtester implementation
+- Updated documentation with commission handling best practices
+- Added test case verifying commission-adjusted calculations
+
+**v0.3.0** (2026-01-09) - **PORTFOLIO IMPLEMENTATION**
+- Implemented Portfolio class for managing holdings and trading
+- Buy/sell operations with commission tracking
+- Full and partial sell capabilities
+- Portfolio value tracking and updates
+- Two allocation methods: equal_weight and score_proportional
+- Incremental rebalancing logic (sell then buy)
+- Complete trade history tracking
+- Edge case handling (insufficient cash warnings)
+- Comprehensive test suite for all portfolio operations
+- TODOs marked for future review (rebalancing optimization, validation strategies)
 
 **v0.2.1** (2026-01-09) - **BUGFIX RELEASE**
 - Fixed MultiIndex handling when yfinance returns columns with ticker in second level
@@ -89,11 +109,14 @@ pip install -r requirements.txt
 trading_backtest/
 ├── data/                  # Cache directory (not in git)
 ├── examples/              # Usage examples
+│   ├── test_data_manager.py
+│   └── test_portfolio.py
 ├── tests/                 # Unit tests
 └── trading_backtest/      # Main package
+    ├── __init__.py
     ├── data_manager.py    # ✅ Data download & caching
+    ├── portfolio.py       # ✅ Portfolio management
     ├── backtester.py      # 🚧 Backtesting engine
-    ├── portfolio.py       # 🚧 Portfolio management
     ├── metrics.py         # 🚧 Performance metrics
     ├── strategies/        # 🚧 Trading strategies
     └── utils.py           # 🚧 Helper functions
@@ -126,18 +149,51 @@ Run the test script:
 python examples/test_data_manager.py
 ```
 
+### Testing Portfolio
+
+```python
+from trading_backtest.portfolio import Portfolio
+
+# Initialize portfolio with $100,000
+portfolio = Portfolio(initial_capital=100000)
+
+# Buy shares
+portfolio.buy('AAPL', shares=100, price=150)
+portfolio.buy('MSFT', shares=50, price=250)
+
+# Update value with current prices
+prices = {'AAPL': 160, 'MSFT': 260}
+total_value = portfolio.update_value(prices)
+
+print(f"Total portfolio value: ${total_value:,.2f}")
+print(f"Holdings: {portfolio.holdings}")
+print(f"Cash: ${portfolio.cash:,.2f}")
+
+# View trade history
+print(portfolio.get_trade_history())
+```
+
+Run the test script:
+
+```bash
+python examples/test_portfolio.py
+```
+
 ## Roadmap
 
 ### Phase 1: Core Infrastructure ✅
 - [x] Data manager with caching
 - [x] Data validation
 - [x] Project structure
+- [x] Portfolio class with buy/sell operations
+- [x] Commission tracking
+- [x] Allocation methods (equal, score-proportional)
 
 ### Phase 2: Backtesting Engine 🚧
-- [ ] Portfolio class
-- [ ] Backtesting loop
-- [ ] Rebalancing logic
-- [ ] Commission handling
+- [ ] Backtester core class
+- [ ] Backtesting loop with holding periods
+- [ ] Integration with DataManager and Portfolio
+- [ ] Rebalancing execution
 
 ### Phase 3: Strategies & Metrics 🚧
 - [ ] SMA ratio strategy
@@ -146,7 +202,7 @@ python examples/test_data_manager.py
 
 ### Phase 4: Advanced Features 📋
 - [ ] Stop-loss mechanisms
-- [ ] Multiple allocation methods
+- [ ] More allocation methods
 - [ ] Visualization tools
 - [ ] Delisting handling
 

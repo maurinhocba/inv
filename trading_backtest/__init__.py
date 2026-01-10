@@ -3,18 +3,20 @@ Trading Backtest Framework
 
 A modular framework for backtesting algorithmic trading strategies.
 
-Version: 0.1.2
+Version: 0.3.1
 Author: [Your Name]
-Date: 2026-01-08
+Date: 2026-01-09
 """
 
-__version__ = "0.1.2"
+__version__ = "0.3.1"
 __author__ = "[Your Name]"
 
-# Import main classes when available
+# Import main classes
 from .data_manager import DataManager
+from .portfolio import Portfolio
 
 __all__ = [
     'DataManager',
-    # Will add: 'Backtester', 'Portfolio', 'Metrics', etc.
+    'Portfolio',
+    # Will add: 'Backtester', 'Metrics', etc.
 ]

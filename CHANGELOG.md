@@ -5,6 +5,70 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-01-09
+
+### Added
+- **CRITICAL**: `convert_values_to_shares()` method in Portfolio
+  - Correctly accounts for buy commissions when converting dollar amounts to shares
+  - Prevents insufficient cash errors during rebalancing
+  - Essential for backtester implementation
+
+### Changed
+- Updated PORTFOLIO_NOTES.md with critical section on commission handling
+- Added test for commission-adjusted share calculation (test 10)
+
+### Technical Details
+**The Commission Problem:**
+When allocating capital, you must account for commission BEFORE calculating shares:
+
+```python
+# WRONG - causes insufficient cash:
+shares = cash / price  
+
+# CORRECT - accounts for commission:
+value_for_shares = cash / (1 + commission_buy)
+shares = value_for_shares / price
+```
+
+Example: With $10,000 and 0.1% commission:
+- Wrong way: tries to buy 100 shares → costs $10,010 (exceeds cash!)
+- Right way: buys 99.90 shares → costs exactly $9,999.99 ✓
+
+The new `convert_values_to_shares()` method handles this automatically.
+
+## [0.3.0] - 2026-01-09
+
+### Added
+- **Portfolio class**: Complete portfolio management system
+  - Buy and sell operations with commission tracking
+  - Full sell (`sell()`) and partial sell (`sell_partial()`) methods
+  - Portfolio value tracking and updates based on current prices
+  - Holdings management with fractional shares support
+  - Complete trade history with timestamps
+- **Allocation methods**:
+  - `equal_weight`: Distributes capital equally among selected assets
+  - `score_proportional`: Allocates capital proportional to asset scores
+- **Rebalancing logic**: Incremental approach (sell unwanted, buy needed)
+- **Test suite**: Comprehensive tests for all portfolio operations (`test_portfolio.py`)
+
+### Changed
+- Project version bumped to 0.3.0
+- Updated `__init__.py` to export Portfolio class
+
+### Technical Details
+- Commission rates configurable per portfolio (buy and sell can differ)
+- Warnings when insufficient cash (buys maximum possible instead of failing)
+- TODOs marked for future optimization:
+  - Rebalancing logic review (line 202): Current incremental approach may need optimization
+  - Validation strategy review (line 245): Warning vs exception handling
+- Cash residual intentionally allowed (< $1 typically) per design decision
+
+### Notes
+Portfolio is production-ready but has documented areas for future enhancement:
+1. Rebalancing order optimization for minimizing transaction costs
+2. More sophisticated insufficient cash handling strategies
+3. Advanced allocation methods (risk-based, volatility-weighted, etc.)
+
 ## [0.2.1] - 2026-01-09
 
 ### Fixed
