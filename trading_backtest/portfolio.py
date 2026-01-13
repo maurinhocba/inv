@@ -3,13 +3,19 @@ Portfolio Module
 
 Manages portfolio holdings, cash, and trading operations.
 
-Author: [Your Name]
-Version: 0.3.1
+Author: Mauro S. Maza - mauromaza8@gmail.com
+Version: 0.3.2
 Date: 2026-01-09
 
 Changelog:
+- 0.3.2: Improved rebalancing to account for sell commissions; relaxed cash validation
 - 0.3.1: Added convert_values_to_shares() for commission-adjusted calculations
 - 0.3.0: Initial Portfolio implementation
+
+TODO:
+- Refactor to work entirely with monetary values instead of mixing values and shares.
+  Current design mixes values ($) and shares, complicating commission calculations.
+  Proposed: All internal calculations in values, convert to shares only at final trade execution.
 """
 
 import pandas as pd
@@ -74,10 +80,13 @@ class Portfolio:
         
         # TODO: Review - should we raise exception or adjust shares to fit cash?
         if total_cost > self.cash:
-            warnings.warn(
-                f"Insufficient cash for {ticker}: need ${total_cost:.2f}, have ${self.cash:.2f}. "
-                f"Buying maximum possible."
-            )
+            # Only warn if difference is significant (> $1, not just floating point error)
+            if total_cost - self.cash > 1:
+                warnings.warn(
+                    f"Insufficient cash for {ticker}: need ${total_cost:.2f}, have ${self.cash:.2f}. "
+                    f"Difference is ${total_cost - self.cash:.2f}. "
+                    f"Buying maximum possible."
+                )
             # Buy maximum possible
             max_cost = self.cash / (1 + self.commission_buy)
             shares = max_cost / price
@@ -174,7 +183,7 @@ class Portfolio:
             allocation_method (str): 'equal' or 'score_proportional'
         
         Returns:
-            dict: {ticker: target_shares}
+            dict: {ticker: target_value} (in dollars, not shares)
         
         Raises:
             ValueError: If allocation_method is unknown
@@ -192,7 +201,8 @@ class Portfolio:
         
         Uses incremental approach:
         1. Sell positions not in target or that need reduction
-        2. Buy new positions or increase existing ones
+        2. Adjust buy quantities to account for value lost to sell commissions
+        3. Buy new positions or increase existing ones
         
         Args:
             target_holdings (dict): {ticker: target_shares}
@@ -202,7 +212,16 @@ class Portfolio:
         Note:
             TODO: Review rebalancing logic - current implementation is incremental.
             May need optimization for transaction costs or more sophisticated ordering.
+            
+            TODO (CRITICAL): Refactor to work with monetary values throughout instead of
+            mixing shares and values. This would simplify commission handling significantly.
         """
+        
+        # Track portfolio value to calculate commission impact
+        self.update_value(prices_dict, date)
+        portfolio_value_initial = self.total_value
+        cash_initial = self.cash
+        
         # Step 1: Sell what we don't need or need to reduce
         for ticker in list(self.holdings.keys()):
             current_shares = self.holdings[ticker]
@@ -216,13 +235,30 @@ class Portfolio:
                 shares_to_sell = current_shares - target_shares
                 self.sell_partial(ticker, shares_to_sell, prices_dict[ticker], date)
         
+        # Calculate value lost to sell commissions
+        self.update_value(prices_dict, date)
+        portfolio_value_after_sell = self.total_value
+        value_lost = portfolio_value_initial - portfolio_value_after_sell
+        
+        # Debug output for commission tracking (can be commented out if too verbose)
+        if value_lost > 0.01:  # Only print if meaningful (> 1 cent)
+            print(f"Value lost to sell commissions on {date}: ${value_lost:.2f}")
+        
+        # Adjust buy quantities to account for sell commission losses
+        if value_lost > 0.01:  # Use 1 cent threshold to avoid floating point issues
+            cash_after_sell = self.cash
+            cash_intended_to_buy = cash_after_sell - cash_initial + value_lost
+            fraction_to_buy = (cash_intended_to_buy - value_lost) / cash_intended_to_buy
+        else:
+            fraction_to_buy = 1.0
+        
         # Step 2: Buy what we need or need to increase
         for ticker, target_shares in target_holdings.items():
             current_shares = self.holdings.get(ticker, 0)
             
             if target_shares > current_shares:
                 # Buy new or increase position
-                shares_to_buy = target_shares - current_shares
+                shares_to_buy = (target_shares - current_shares) * fraction_to_buy
                 
                 # Check if we have enough cash
                 cost = shares_to_buy * prices_dict[ticker]
@@ -232,11 +268,12 @@ class Portfolio:
                     self.buy(ticker, shares_to_buy, prices_dict[ticker], date)
                 else:
                     # Buy what we can afford
-                    # TODO: Review - should we warn here or handle silently?
-                    warnings.warn(
-                        f"Insufficient cash to buy {shares_to_buy} shares of {ticker}. "
-                        f"Buying maximum possible with remaining cash."
-                    )
+                    if (total_cost - self.cash) > 1:
+                        warnings.warn(
+                            f"Insufficient cash to buy {shares_to_buy:.2f} shares of {ticker}. "
+                            f"Difference is ${total_cost - self.cash:.2f}. "
+                            f"Buying maximum possible with remaining cash."
+                        )
                     if self.cash > 0:
                         max_shares = self.cash / (prices_dict[ticker] * (1 + self.commission_buy))
                         if max_shares > 0:
@@ -255,8 +292,8 @@ class Portfolio:
             total_value (float): Total value to distribute
         
         Returns:
-            dict: {ticker: shares} - Note: shares are monetary amounts, not actual shares
-                  Actual share counts calculated when prices are known
+            dict: {ticker: target_value} - Values in dollars, not shares
+                  Actual share counts calculated during rebalance with prices
         """
         n = len(selected_assets)
         if n == 0:
@@ -264,7 +301,6 @@ class Portfolio:
         
         value_per_asset = total_value / n
         
-        # Return target value, not shares (shares calculated during rebalance with prices)
         return {ticker: value_per_asset for ticker, score in selected_assets}
     
     def _score_proportional(self, selected_assets, total_value):

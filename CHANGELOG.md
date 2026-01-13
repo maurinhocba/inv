@@ -5,6 +5,113 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-01-09
+
+### Changed
+- **Backtester**: Improved rebalancing logic
+  - Now updates portfolio value BEFORE executing strategy
+  - Separates price dictionaries for holdings vs target assets
+  - Handles empty portfolio at start correctly
+- **Portfolio**: Enhanced sell commission handling
+  - Adjusts buy quantities to account for value lost in sell commissions
+  - Added debug output for commission tracking (can be disabled)
+  - Relaxed cash validation threshold to handle floating point errors
+
+### Fixed
+- Strategy renamed: `sma_ratio_strategy` → `price_to_sma_ratio` (more descriptive)
+- Lookback period increased from 60 to 100 days in tests (appropriate for 50-day SMA)
+- Cash validation now allows tiny negative values due to floating point rounding
+- Insufficient cash warnings only shown when difference > $1 (not for rounding errors)
+
+### Added
+- Three new edge case tests in test_backtester.py:
+  - Empty portfolio start (first rebalance)
+  - No-sell rebalance (all assets maintained)
+  - Complete turnover rebalance (sell all, buy all new)
+
+### Documentation
+- Updated BACKTESTER_GUIDE.md with proper lookback period calculation
+- Updated README.md to clarify BACKTESTER_GUIDE includes strategy writing
+- Author updated throughout: Mauro S. Maza - mauromaza8@gmail.com
+
+### TODO (Documented for Future)
+- **CRITICAL ARCHITECTURAL ISSUE**: Portfolio class mixes monetary values and share quantities
+  - Current design: `calculate_target_holdings()` returns values ($), then converts to shares, 
+    then `rebalance()` works with shares, but needs values again for commission calculations
+  - Proposed refactor: Work entirely with monetary values throughout, only convert to shares 
+    at final trade execution
+  - This would significantly simplify commission handling and reduce complexity
+  - Documented in portfolio.py TODO section
+
+### Technical Notes
+- Sell commission impact calculation uses 0.01 threshold (1 cent) to avoid floating point issues
+- `fraction_to_buy` logic proportionally reduces all purchases when sell commissions reduce available cash
+- Commission debug print can be commented out if output too verbose
+
+## [0.4.0] - 2026-01-09
+
+### Added
+- **Backtester class**: Complete backtesting engine
+  - Orchestrates DataManager, Portfolio, and Strategy
+  - Automatic data loading with configurable lookback period
+  - Main loop iterates through holding periods
+  - Strategy execution at each rebalance point
+  - Commission-adjusted capital allocation (uses `convert_values_to_shares`)
+  - Portfolio rebalancing with incremental approach
+  - Comprehensive history tracking
+- **Metrics module**: Performance measurement
+  - TIR (annualized IRR)
+  - Total return
+  - Sharpe ratio
+  - Maximum drawdown
+  - Annualized volatility
+  - Number of rebalances
+  - Utility functions: rolling Sharpe, drawdown series, strategy comparison
+- **SMA Ratio Strategy**: First momentum strategy
+  - Selects top N assets by price/SMA ratio
+  - Configurable SMA window (default: 50 days)
+  - Proper look-ahead bias prevention
+  - Handles missing data gracefully
+- **Test suite**: 5 comprehensive tests
+  - Basic backtest
+  - Different holding periods
+  - Allocation methods comparison
+  - Portfolio evolution verification
+  - Commission impact analysis
+
+### Changed
+- Project status: Alpha → Beta
+- Updated `__init__.py` to export Backtester, strategies, metrics
+
+### Technical Implementation
+
+**Holding Period Handling:**
+- Uses calendar days (simpler than trading days)
+- Skips dates without data automatically
+- Uses most recent available date if exact date missing
+
+**Data Flow:**
+```
+DataManager → Full historical data → Strategy (filters to current_date)
+Strategy → Selected assets with scores → Portfolio allocation
+Portfolio → Target values → convert_values_to_shares() → Rebalance
+```
+
+**Critical Features:**
+- Always uses `convert_values_to_shares()` to prevent insufficient cash errors
+- Strategy receives full DataFrame, responsible for avoiding look-ahead bias
+- MultiIndex DataFrame format throughout (Date, ticker)
+
+### TODO (Marked for future)
+- Stop-loss implementation (currently stubbed out)
+- More allocation methods (risk-parity, volatility-weighted)
+- More strategies (mean reversion, value-based, etc.)
+- Visualization tools
+- Parameter optimization utilities
+
+### Breaking Changes
+None - all previous APIs remain compatible
+
 ## [0.3.1] - 2026-01-09
 
 ### Added

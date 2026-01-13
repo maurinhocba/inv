@@ -3,7 +3,7 @@ Data Manager Module (Production Version)
 
 Robust historical price data manager using Yahoo Finance.
 
-Author: [Your Name]
+Author: Mauro S. Maza - mauromaza8@gmail.com
 Version: 0.2.1
 Date: 2026-01-09
 

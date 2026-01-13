@@ -7,17 +7,44 @@ A modular Python framework for backtesting algorithmic trading strategies based 
 - ✅ Efficient data caching with Parquet format
 - ✅ Automatic data validation
 - ✅ Flexible strategy implementation
-- 🚧 Multiple portfolio allocation methods
-- 🚧 Stop-loss functionality
-- 🚧 Comprehensive performance metrics
-- 🚧 Parameter optimization tools
+- ✅ Multiple portfolio allocation methods (equal weight, score proportional)
+- ✅ Commission tracking (separate buy/sell rates)
+- ✅ Comprehensive performance metrics (TIR, Sharpe, drawdown, volatility)
+- ✅ Full backtest history tracking
+- ✅ Fractional shares support
+- ✅ Look-ahead bias prevention
+- 🚧 Stop-loss functionality (planned)
+- 🚧 Parameter optimization tools (planned)
+- 🚧 Visualization tools (planned)
 
 ## Project Status
 
-**Version:** 0.3.1 (Alpha)  
-**Status:** DataManager and Portfolio modules complete and tested, backtesting engine in development
+**Version:** 0.4.1 (Beta)  
+**Status:** Complete backtesting framework - production ready with documented improvement opportunities
 
 ### Changelog
+
+**v0.4.1** (2026-01-09) - **REFINEMENTS & EDGE CASES**
+- Improved backtester rebalancing: separates holdings/target price dicts, updates value before strategy
+- Enhanced sell commission handling in portfolio (adjusts buys for commission losses)
+- Strategy renamed to more descriptive `price_to_sma_ratio`
+- Increased lookback period from 60 to 100 days (proper for 50-day SMA)
+- Fixed cash validation for floating point rounding errors
+- Added 3 new edge case tests (empty start, no-sell, complete turnover)
+- Updated author: Mauro S. Maza
+- **Documented TODO**: Refactor portfolio to work entirely with values (not mixed values/shares)
+
+**v0.4.0** (2026-01-09) - **BACKTESTER COMPLETE** 🎉
+- Implemented complete Backtester class
+- Full integration of DataManager + Portfolio + Strategy
+- Automatic data loading with lookback periods
+- Rebalancing loop with holding periods (calendar days)
+- Commission-adjusted capital allocation (critical fix applied)
+- Comprehensive metrics calculation (TIR, Sharpe, drawdown, volatility)
+- First strategy implemented: SMA Ratio
+- Complete test suite with 5 test scenarios
+- Stop-loss marked as TODO for future implementation
+- Production-ready for backtesting momentum-based strategies
 
 **v0.3.1** (2026-01-09) - **CRITICAL ADDITION**
 - Added `convert_values_to_shares()` method to Portfolio
@@ -107,19 +134,22 @@ pip install -r requirements.txt
 
 ```
 trading_backtest/
-├── data/                  # Cache directory (not in git)
-├── examples/              # Usage examples
+├── data/                     # Cache directory (not in git)
+├── examples/                 # Usage examples & tests
 │   ├── test_data_manager.py
-│   └── test_portfolio.py
-├── tests/                 # Unit tests
-└── trading_backtest/      # Main package
+│   ├── test_portfolio.py
+│   └── test_backtester.py
+├── tests/                    # Unit tests (future)
+└── trading_backtest/         # Main package
     ├── __init__.py
-    ├── data_manager.py    # ✅ Data download & caching
-    ├── portfolio.py       # ✅ Portfolio management
-    ├── backtester.py      # 🚧 Backtesting engine
-    ├── metrics.py         # 🚧 Performance metrics
-    ├── strategies/        # 🚧 Trading strategies
-    └── utils.py           # 🚧 Helper functions
+    ├── data_manager.py       # ✅ Data download & caching
+    ├── portfolio.py          # ✅ Portfolio management  
+    ├── backtester.py         # ✅ Backtesting engine
+    ├── metrics.py            # ✅ Performance metrics
+    ├── strategies/           # ✅ Trading strategies
+    │   ├── __init__.py
+    │   └── sma_ratio.py      # ✅ SMA ratio momentum
+    └── utils.py              # 🚧 Helper functions (future)
 ```
 
 ## Quick Start
@@ -181,30 +211,38 @@ python examples/test_portfolio.py
 
 ## Roadmap
 
-### Phase 1: Core Infrastructure ✅
+### Phase 1: Core Infrastructure ✅ COMPLETE
 - [x] Data manager with caching
-- [x] Data validation
+- [x] Data validation  
 - [x] Project structure
 - [x] Portfolio class with buy/sell operations
 - [x] Commission tracking
 - [x] Allocation methods (equal, score-proportional)
+- [x] Backtester core engine
+- [x] Metrics calculation (TIR, Sharpe, drawdown, volatility)
+- [x] First strategy (SMA ratio)
 
-### Phase 2: Backtesting Engine 🚧
-- [ ] Backtester core class
-- [ ] Backtesting loop with holding periods
-- [ ] Integration with DataManager and Portfolio
-- [ ] Rebalancing execution
+### Phase 2: Additional Strategies 🚧
+- [x] SMA ratio strategy
+- [ ] Mean reversion strategy
+- [ ] Momentum strategy
+- [ ] Value-based strategy
+- [ ] Combined strategies
 
-### Phase 3: Strategies & Metrics 🚧
-- [ ] SMA ratio strategy
-- [ ] Performance metrics (TIR, Sharpe, drawdown)
-- [ ] Parameter sweep utilities
-
-### Phase 4: Advanced Features 📋
+### Phase 3: Advanced Features 📋
 - [ ] Stop-loss mechanisms
-- [ ] More allocation methods
-- [ ] Visualization tools
+- [ ] More allocation methods (risk-parity, volatility-weighted)
+- [ ] Parameter optimization utilities
+- [ ] Visualization tools (equity curves, drawdown charts)
 - [ ] Delisting handling
+- [ ] Benchmark comparison
+
+### Phase 4: Production Features 📋
+- [ ] Walk-forward analysis
+- [ ] Monte Carlo simulation
+- [ ] Transaction cost analysis
+- [ ] Slippage modeling
+- [ ] Real-time trading integration
 
 ## Development Guidelines
 
@@ -213,12 +251,24 @@ python examples/test_portfolio.py
 - Type hints where appropriate
 - Keep modules focused and modular
 
+## Documentation
+
+- **[TODO.md](TODO.md)** - Planned features and improvements (including critical portfolio refactor)
+- **[BACKTESTER_GUIDE.md](BACKTESTER_GUIDE.md)** - Complete guide to using the backtester and writing new strategy functions
+- **[COMMISSION_HANDLING_GUIDE.md](COMMISSION_HANDLING_GUIDE.md)** - Critical guide for commission calculations
+- **[PORTFOLIO_NOTES.md](PORTFOLIO_NOTES.md)** - Technical notes on portfolio design decisions
+- **[CHANGELOG.md](CHANGELOG.md)** - Detailed version history
+- **[BUGFIXES_v0.2.1.md](BUGFIXES_v0.2.1.md)** - DataManager bugfix documentation
+
 ## Known Limitations
 
 - **Survivorship bias:** Currently works only with tickers still trading
 - **Fractional shares:** Assumes ability to buy fractional shares (not realistic for all brokers)
 - **Slippage:** Not yet implemented
+- **Stop-loss:** Not yet implemented
 - **Dividends:** Uses adjusted close prices (includes reinvested dividends)
+- **Market impact:** Assumes unlimited liquidity
+- **Bid-ask spread:** Uses single price for buy and sell
 
 ## License
 
