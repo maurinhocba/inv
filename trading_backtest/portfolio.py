@@ -241,8 +241,8 @@ class Portfolio:
         value_lost = portfolio_value_initial - portfolio_value_after_sell
         
         # Debug output for commission tracking (can be commented out if too verbose)
-        if value_lost > 0.01:  # Only print if meaningful (> 1 cent)
-            print(f"Value lost to sell commissions on {date}: ${value_lost:.2f}")
+        # if value_lost > 0.01:  # Only print if meaningful (> 1 cent)
+            # print(f"Value lost to sell commissions on {date}: ${value_lost:.2f}")
         
         # Adjust buy quantities to account for sell commission losses
         if value_lost > 0.01:  # Use 1 cent threshold to avoid floating point issues

@@ -204,6 +204,7 @@ class DataManager:
 
             # Download earlier data if needed
             if start_date < cache_start:
+                print(f'Early data downloaded for ticker {ticker}: start_date {start_date} - cache_start {cache_start}')
                 early = self._download_ticker(ticker, start_date, cache_start - timedelta(days=1))
                 if early is not None and not early.empty:
                     parts.append(early)
@@ -212,6 +213,7 @@ class DataManager:
 
             # Download later data if needed
             if end_date > cache_end:
+                print(f'Later data downloaded for ticker {ticker}: end_date {end_date} - cache_end {cache_end}')
                 late = self._download_ticker(ticker, cache_end + timedelta(days=1), end_date)
                 if late is not None and not late.empty:
                     parts.append(late)
@@ -222,6 +224,7 @@ class DataManager:
 
         else:
             # Download fresh data
+            print(f'Fresh data downloaded for ticker {ticker}: start_date {start_date} - end_date {end_date}')
             df = self._download_ticker(ticker, start_date, end_date)
 
         # Remove duplicates and save

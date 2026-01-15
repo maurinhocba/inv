@@ -1,0 +1,3 @@
+experiment date
+meaningful name
+version (changes code with same backtest parameters)

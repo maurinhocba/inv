@@ -124,32 +124,91 @@ venv\Scripts\activate
 source venv/bin/activate
 ```
 
-### 3. Install dependencies
+### 3. Install pip-tools (if not already installed)
 
 ```bash
-pip install -r requirements.txt
+pip install pip-tools
 ```
+
+### 4. Generate locked dependencies and install
+
+#### Production environment
+
+```bash
+# Generate requirements.txt with locked versions
+pip-compile requirements.in
+
+# Install dependencies
+pip-sync requirements.txt
+```
+
+#### Development environment
+
+```bash
+# Generate both production and development requirements
+pip-compile requirements.in
+pip-compile requirements-dev.in
+
+# Install all dependencies (production + development)
+pip-sync requirements.txt requirements-dev.txt
+```
+
+### 5. Updating dependencies
+
+```bash
+# Update to latest compatible versions
+pip-compile --upgrade requirements.in
+pip-compile --upgrade requirements-dev.in
+
+# Sync your environment
+pip-sync requirements.txt requirements-dev.txt
+```
+
+**Note on pip-tools:**
+- `pip-compile` generates `.txt` files with exact versions (including transitive dependencies)
+- `pip-sync` installs exactly what's in the `.txt` files (removes unused packages)
+- This ensures reproducible builds across different machines
 
 ## Project Structure
 
 ```
 trading_backtest/
-├── data/                     # Cache directory (not in git)
-├── examples/                 # Usage examples & tests
+├── data/                                   # Cache directory (not in git)
+├── examples/                               # Usage examples & tests
 │   ├── test_data_manager.py
 │   ├── test_portfolio.py
-│   └── test_backtester.py
-├── tests/                    # Unit tests (future)
-└── trading_backtest/         # Main package
+│   ├── test_backtester.py
+│   └── test_new_strategies.py
+├── experiments/                            # Run analysis
+│   ├── _download_data_safely/              # Recommended before simulations
+│   │   └── run.py
+│   ├── 2026_01_14-basic_run_example-v1/    # Basic use example
+│   │   ├── run.py
+│   │   ├── metrics.xlsx
+│   │   ├── history.xlsx
+│   │   └── equity.png
+│   ├── 2026_01_15-sweep_hp&n_example-v1/   # Sweep parameters example
+│   │   ├── run.py
+│   │   ├── sweep_results.parquet
+│   │   ├── sweep_results.xlsx
+│   │   └── tir_heatmap.png
+│   ├── YYYY_MM_DD-meaningful_name-v1/      # Experiment template
+│   │   ├── run.py
+│   │   └── your_output.*
+│   └── name_convention.txt
+├── tests/                                  # Unit tests (future)
+└── trading_backtest/                       # Main package
     ├── __init__.py
-    ├── data_manager.py       # ✅ Data download & caching
-    ├── portfolio.py          # ✅ Portfolio management  
-    ├── backtester.py         # ✅ Backtesting engine
-    ├── metrics.py            # ✅ Performance metrics
-    ├── strategies/           # ✅ Trading strategies
+    ├── data_manager.py                     # ✅ Data download & caching
+    ├── portfolio.py                        # ✅ Portfolio management  
+    ├── backtester.py                       # ✅ Backtesting engine
+    ├── metrics.py                          # ✅ Performance metrics
+    ├── strategies/                         # ✅ Trading strategies
     │   ├── __init__.py
-    │   └── sma_ratio.py      # ✅ SMA ratio momentum
-    └── utils.py              # 🚧 Helper functions (future)
+    │   ├── price_to_sma_ratio.py          # ✅ SMA ratio
+    │   ├── relative_momentum.py           # ✅ Relative momentum
+    │   └── fip.py                         # ✅ Frog in the pan
+    └── utils.py                            # 🚧 Helper functions (future)
 ```
 
 ## Quick Start
@@ -177,6 +236,57 @@ Run the test script:
 
 ```bash
 python examples/test_data_manager.py
+```
+
+#### Important Notes on DataManager Performance
+
+**Cache Behavior with Non-Trading Days:**
+If simulation start/end dates fall on weekends or holidays (days without market data), DataManager will attempt to download those missing days. With `n_jobs=1`, it safely downloads only missing data (relatively fast). However, with `n_jobs>1`, this can cause race conditions and **data corruption**.
+
+**Performance Benchmarks (1 year of data):**
+
+| Operation | Tickers | n_jobs | Time (s) | Notes |
+|-----------|---------|--------|----------|-------|
+| Read cache | 10 | 1 | 0.20 | Baseline |
+| Read cache | 10 | 2 | 0.10 | 2x speedup |
+| Read cache | 10 | 5 | 0.08 | 2.4x speedup |
+| Read cache | 10 | 10 | 0.08 | No improvement vs n_jobs=5 |
+| Read cache | 215 | 1 | 4.53 | Baseline |
+| Read cache | 215 | 2 | 2.27 | 2x speedup |
+| Read cache | 215 | 5 | 1.61 | 2.8x speedup |
+| Read cache | 215 | 10 | 1.63 | No improvement vs n_jobs=5 |
+| Download | 10 | 1 | 0.19 | Similar to cache for small sets |
+| Download | 10 | 2 | ERROR | Thread-safety issues |
+| Download | 215 | 1 | 108.87 | **24x slower than cache** |
+| Download | 215 | 2 | ERROR | **Data corruption risk** |
+
+**Key Conclusions:**
+
+1. **Parallel reads (n_jobs>1) are safe and effective for cached data:**
+   - Optimal value: `n_jobs=5` (2.8x speedup)
+   - `n_jobs=10` shows diminishing returns due to threading overhead
+   - Safe to use when all data is already cached
+
+2. **Parallel downloads (n_jobs>1) are DANGEROUS:**
+   - Causes errors and data corruption
+   - yfinance is not thread-safe for concurrent downloads
+   - **NEVER use n_jobs>1 when downloading new data**
+   - Especially risky when dates fall on non-trading days
+
+3. **Pre-downloading data is critical:**
+   - Cache is 24x faster for large ticker sets
+   - Eliminates reliability issues with internet/yfinance
+   - Each simulation reloads from disk (fast) vs re-downloading (slow + risky)
+   - Use `experiments/_download_data_safely/run.py` before running simulations
+
+**Recommended Workflow:**
+```python
+# Step 1: Download and cache data safely (n_jobs=1)
+dm = DataManager()
+data = dm.get_data(tickers, start_date, end_date, n_jobs=1)
+
+# Step 2: Run simulations with parallel cache reads (n_jobs=5)
+# Each simulation will read from cache quickly and safely
 ```
 
 ### Testing Portfolio
@@ -221,15 +331,26 @@ python examples/test_portfolio.py
 - [x] Backtester core engine
 - [x] Metrics calculation (TIR, Sharpe, drawdown, volatility)
 - [x] First strategy (SMA ratio)
+- [x] Additional strategies (relative momentum, FIP)
 
-### Phase 2: Additional Strategies 🚧
+### Phase 2: Utilities & Best Practices 📋
+- [ ] **[CRITICAL]** Verify data cache functionality works correctly
+- [ ] Standard functions for saving simulation results (metrics, history, plots)
+- [ ] Example: Download data before simulation (recommended practice)
+- [ ] Parallel data downloads (optimize DataManager)
+- [ ] Parallel simulations for parameter sweeps
+- [ ] Portfolio deposit/withdrawal functions (and backtester integration)
+
+### Phase 3: Additional Strategies 🚧
 - [x] SMA ratio strategy
+- [x] Relative momentum strategy
+- [x] FIP (Frog in the Pan) strategy
 - [ ] Mean reversion strategy
-- [ ] Momentum strategy
+- [ ] Pure momentum strategy
 - [ ] Value-based strategy
 - [ ] Combined strategies
 
-### Phase 3: Advanced Features 📋
+### Phase 4: Advanced Features 📋
 - [ ] Stop-loss mechanisms
 - [ ] More allocation methods (risk-parity, volatility-weighted)
 - [ ] Parameter optimization utilities
@@ -237,7 +358,7 @@ python examples/test_portfolio.py
 - [ ] Delisting handling
 - [ ] Benchmark comparison
 
-### Phase 4: Production Features 📋
+### Phase 5: Production Features 📋
 - [ ] Walk-forward analysis
 - [ ] Monte Carlo simulation
 - [ ] Transaction cost analysis
@@ -272,12 +393,12 @@ python examples/test_portfolio.py
 
 ## License
 
-[Your chosen license]
+GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007
 
 ## Contact
 
-[Your contact info]
+Mauro S. Maza - mauromaza8@gmail.com
 
 ---
 
-**Last updated:** 2026-01-08
+**Last updated:** 2026-01-15

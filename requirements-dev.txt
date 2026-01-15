@@ -10,6 +10,7 @@ click==8.3.1
     # via black
 colorama==0.4.6
     # via
+    #   -c requirements.txt
     #   click
     #   pytest
 flake8==7.3.0
@@ -38,7 +39,9 @@ pycodestyle==2.14.0
 pyflakes==3.4.0
     # via flake8
 pygments==2.19.2
-    # via pytest
+    # via
+    #   -c requirements.txt
+    #   pytest
 pytest==9.0.2
     # via -r requirements-dev.in
 pytokens==0.3.0

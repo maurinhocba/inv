@@ -14,7 +14,7 @@ from datetime import datetime
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from trading_backtest.backtester import Backtester
-from trading_backtest.strategies.price_to_sma_ratio import price_to_sma_ratio
+from trading_backtest.strategies import price_to_sma_ratio
 
 
 def test_basic_backtest():

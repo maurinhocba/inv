@@ -10,7 +10,7 @@ The Backtester is the main engine that simulates trading strategies over histori
 
 ```python
 from trading_backtest import Backtester
-from trading_backtest.strategies import sma_ratio_strategy
+from trading_backtest.strategies import price_to_sma_ratio
 
 # Create backtester
 backtester = Backtester()
@@ -24,7 +24,7 @@ results = backtester.run(
     lookback_period=60,
     holding_period=30,
     n_assets=2,
-    strategy_func=sma_ratio_strategy,
+    strategy_func=price_to_sma_ratio,
     strategy_params={'m': 50}
 )
 
@@ -177,11 +177,11 @@ for hp in [15, 30, 60]:
 ### Comparing Strategies
 
 ```python
-from trading_backtest.strategies import sma_ratio_strategy
+from trading_backtest.strategies import price_to_sma_ratio
 # from trading_backtest.strategies import momentum_strategy  # Future
 
 strategies = [
-    ('SMA Ratio', sma_ratio_strategy, {'m': 50}),
+    ('Price/SMA Ratio', price_to_sma_ratio, {'m': 50}),
     # ('Momentum', momentum_strategy, {'period': 90}),
 ]
 

@@ -25,9 +25,27 @@ wheels/
 
 # Data cache (critical - don't commit cached market data)
 data/
+
+# Result files - ignore globally except in specific experiment examples
 *.parquet
+!experiments/_download_data_safely/**/*.parquet
+!experiments/2026_01_14-basic_run_example-v1/**/*.parquet
+!experiments/2026_01_15-sweep_hp&n_example-v1/**/*.parquet
+
 *.csv
+!experiments/_download_data_safely/**/*.csv
+!experiments/2026_01_14-basic_run_example-v1/**/*.csv
+!experiments/2026_01_15-sweep_hp&n_example-v1/**/*.csv
+
 *.xlsx
+!experiments/_download_data_safely/**/*.xlsx
+!experiments/2026_01_14-basic_run_example-v1/**/*.xlsx
+!experiments/2026_01_15-sweep_hp&n_example-v1/**/*.xlsx
+
+*.png
+!experiments/_download_data_safely/**/*.png
+!experiments/2026_01_14-basic_run_example-v1/**/*.png
+!experiments/2026_01_15-sweep_hp&n_example-v1/**/*.png
 
 # IDE
 .vscode/
@@ -44,9 +62,19 @@ data/
 .DS_Store
 Thumbs.db
 
-# Results and outputs
+# Results and outputs (default - except specific examples)
 results/
 outputs/
 plots/
 logs/
 *.log
+
+# Experiments - ignore all except specific examples
+experiments/*
+!experiments/name_convention.txt
+!experiments/_download_data_safely/
+!experiments/_download_data_safely/**
+!experiments/2026_01_14-basic_run_example-v1/
+!experiments/2026_01_14-basic_run_example-v1/**
+!experiments/2026_01_15-sweep_hp&n_example-v1/
+!experiments/2026_01_15-sweep_hp&n_example-v1/**
